@@ -7,6 +7,7 @@ import (
 	"errors"
 	"math/rand"
 	"os"
+	"path"
 	"path/filepath"
 	"sync"
 	"time"
@@ -23,7 +24,7 @@ func randomHexString(n int) string {
 		panic(err)
 	}
 
-	return hex.EncodeToString(b)[:n]
+	return hex.EncodeToString(b)
 }
 
 type FileStorage struct {
@@ -38,6 +39,14 @@ func (s *FileStorage) initDB() {
 	s.db.Exec("create index if not exists idx_metadata_name on metadata(name)")
 	s.db.Exec("create index if not exists idx_metadata_reference on metadata(reference)")
 	s.db.Exec("create index if not exists idx_metadata_name_reference on metadata(name, reference)")
+}
+
+func (s *FileStorage) getPathByReference(reference string) string {
+	return path.Join(s.path, reference[0:2], reference[2:4], reference[4:6], reference)
+}
+
+func (s *FileStorage) deleteFileNode(reference string) {
+	os.RemoveAll(s.getPathByReference(reference))
 }
 
 func NewFileStorage(path string) (*FileStorage, error) {
@@ -140,16 +149,13 @@ func (storage *FileStorage) GetByName(name string) (Node, error) {
 	return &node, nil
 }
 
-func (storage *FileStorage) Create(
-	name string,
-	metadata interface{},
-) (Node, error) {
+func (storage *FileStorage) Create(name string, metadata interface{}) (Node, error) {
 	if storage == nil {
 		return nil, errors.New("storage is nil")
 	}
 
-	storage.lock.RLock()
-	defer storage.lock.RUnlock()
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
 
 	if !storage.isOpen {
 		return nil, errors.New("storage is closed")
@@ -173,6 +179,72 @@ func (storage *FileStorage) Create(
 	}
 
 	return &node, nil
+}
+
+func (storage *FileStorage) Delete(reference string) error {
+	if storage == nil {
+		return errors.New("storage is nil")
+	}
+
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
+
+	if !storage.isOpen {
+		return errors.New("storage is closed")
+	}
+
+	_, err := storage.db.Exec("delete from metadata where reference = ?", reference)
+
+	if err != nil {
+		return err
+	}
+
+	storage.deleteFileNode(reference)
+
+	return nil
+}
+
+func (storage *FileStorage) DeleteBy(namePrefix string, namePostfix string) error {
+	if storage == nil {
+		return errors.New("storage is nil")
+	}
+
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
+
+	if !storage.isOpen {
+		return errors.New("storage is closed")
+	}
+
+	rows, err := storage.db.Query("select reference from metadata where name like ?", namePrefix+"%"+namePostfix)
+	if err != nil {
+		return err
+	}
+
+	references := make([]string, 0)
+
+	for rows.Next() {
+		var resultReference string
+
+		err = rows.Scan(&resultReference)
+		if err != nil {
+			return err
+		}
+
+		references = append(references, resultReference)
+	}
+
+	_, err = storage.db.Exec("delete from metadata where name like ?", namePrefix+"%"+namePostfix)
+
+	if err != nil {
+		return err
+	}
+
+	for _, reference := range references {
+		storage.deleteFileNode(reference)
+	}
+
+	return nil
 }
 
 func (storage *FileStorage) ExistsByName(name string) (bool, error) {
@@ -215,17 +287,83 @@ func (storage *FileStorage) ExistsByReference(reference string) (bool, error) {
 	return node != nil && node != (*FileNode)(nil), nil
 }
 
-func (storage *FileStorage) List(namePrefix string, namePostfix string) ([]Node, error) {
-	return []Node{}, nil
+func (storage *FileStorage) ListBy(namePrefix string, namePostfix string) ([]Node, error) {
+	if storage == nil {
+		return nil, errors.New("storage is nil")
+	}
 
+	storage.lock.RLock()
+	defer storage.lock.RUnlock()
+
+	if !storage.isOpen {
+		return nil, errors.New("storage is closed")
+	}
+
+	rows, err := storage.db.Query("select name, reference, metadata from metadata where name like ?", namePrefix+"%"+namePostfix)
+	if err != nil {
+		return nil, err
+	}
+
+	nodes := make([]Node, 0)
+
+	for rows.Next() {
+		var resultName string
+		var resultReference string
+		var resultMetadataJson sql.NullString
+
+		err = rows.Scan(&resultName, &resultReference, &resultMetadataJson)
+		if err != nil {
+			return nil, err
+		}
+
+		var node FileNode
+		node.name = resultName
+		node.reference = resultReference
+
+		if resultMetadataJson.Valid {
+			err = json.Unmarshal([]byte(resultMetadataJson.String), &node.metadata)
+			if err != nil {
+				node.metadata = nil
+			}
+		}
+
+		nodes = append(nodes, &node)
+	}
+
+	return nodes, nil
 }
 
 func (storage *FileStorage) ListReferences(namePrefix string, namePostfix string) ([]string, error) {
-	return []string{}, nil
-}
+	if storage == nil {
+		return nil, errors.New("storage is nil")
+	}
 
-func (storage *FileStorage) ListNames(namePrefix string, namePostfix string) ([]string, error) {
-	return []string{}, nil
+	storage.lock.RLock()
+	defer storage.lock.RUnlock()
+
+	if !storage.isOpen {
+		return nil, errors.New("storage is closed")
+	}
+
+	rows, err := storage.db.Query("select reference from metadata where name like ?", namePrefix+"%"+namePostfix)
+	if err != nil {
+		return nil, err
+	}
+
+	references := make([]string, 0)
+
+	for rows.Next() {
+		var resultReference string
+
+		err = rows.Scan(&resultReference)
+		if err != nil {
+			return nil, err
+		}
+
+		references = append(references, resultReference)
+	}
+
+	return references, nil
 }
 
 func (storage *FileStorage) Open() error {
