@@ -70,6 +70,11 @@ func TestCreate(t *testing.T) {
 	assert.Equal(t, node2.GetName(), "BBBBBBBB")
 	assert.Nil(t, node2.GetMetadata())
 
+	// Check interface implementation
+	storageCast, ok := (interface{}(storage)).(Storage)
+	assert.True(t, ok)
+	assert.NotNil(t, storageCast)
+
 	// Check references not match
 	assert.NotEqual(t, node1.GetReference(), node2.GetReference())
 
@@ -851,6 +856,145 @@ func TestDeletePrefix(t *testing.T) {
 		assert.True(t, CheckFullContains(names, query_names))
 		assert.True(t, CheckFullContains(references, query_references))
 	}
+
+	err = storage.Close()
+	assert.NoError(t, err)
+
+	assert.DirExists(t, testDirName)
+}
+
+func TestRename(t *testing.T) {
+	testDirName := "test-file-storage-TestRename"
+
+	t.Cleanup(func() {
+		os.RemoveAll(testDirName)
+	})
+
+	storage, err := NewFileStorage(testDirName)
+	assert.NoError(t, err)
+	assert.NotNil(t, storage)
+
+	err = storage.Open()
+	assert.NoError(t, err)
+
+	// Create full node
+	node, err := storage.Create(
+		"AAAAAAAA",
+		map[string]interface{}{
+			"size":   "1K",
+			"amount": 13,
+			"tags": []string{
+				"big",
+				"tasty",
+				"chesbargo",
+			},
+		},
+	)
+	assert.NoError(t, err)
+	assert.NotNil(t, node)
+	assert.Equal(t, node.GetName(), "AAAAAAAA")
+	assert.NotNil(t, node.GetMetadata())
+
+	// Cast & rename
+	mutableNode, ok := node.(TMutable)
+	assert.True(t, ok)
+
+	err = mutableNode.SetName("BBBBBBBB")
+	assert.NoError(t, err)
+	assert.Equal(t, "BBBBBBBB", node.GetName())
+
+	// Now query again and check
+	nodeRequeried, err := storage.GetByReference(node.GetReference())
+	assert.NoError(t, err)
+	assert.Equal(t, "BBBBBBBB", nodeRequeried.GetName())
+
+	nodeRequeried, err = storage.GetByName("BBBBBBBB")
+	assert.NoError(t, err)
+	assert.Equal(t, node.GetReference(), nodeRequeried.GetReference())
+
+	nodeRequeried, err = storage.GetByName("AAAAAAAA")
+	assert.NoError(t, err)
+	assert.Nil(t, nodeRequeried)
+
+	exists, err := storage.ExistsByName("BBBBBBBB")
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	exists, err = storage.ExistsByName("AAAAAAAA")
+	assert.NoError(t, err)
+	assert.False(t, exists)
+
+	err = storage.Close()
+	assert.NoError(t, err)
+
+	assert.DirExists(t, testDirName)
+}
+
+func TestChangeMetadata(t *testing.T) {
+	testDirName := "test-file-storage-TestChangeMetadata"
+
+	t.Cleanup(func() {
+		os.RemoveAll(testDirName)
+	})
+
+	storage, err := NewFileStorage(testDirName)
+	assert.NoError(t, err)
+	assert.NotNil(t, storage)
+
+	err = storage.Open()
+	assert.NoError(t, err)
+
+	// Create full node
+	node, err := storage.Create(
+		"AAAAAAAA",
+		map[string]interface{}{
+			"size":   "1K",
+			"amount": 13,
+			"tags": []string{
+				"big",
+				"tasty",
+				"chesbargo",
+			},
+		},
+	)
+	assert.NoError(t, err)
+	assert.NotNil(t, node)
+	assert.Equal(t, node.GetName(), "AAAAAAAA")
+	assert.NotNil(t, node.GetMetadata())
+
+	// Cast & change
+	mutableNode, ok := node.(TMutable)
+	assert.True(t, ok)
+
+	// non-null -> non-null
+	err = mutableNode.SetMetadata("new metadata set to string")
+	assert.NoError(t, err)
+	assert.Equal(t, "new metadata set to string", node.GetMetadata())
+
+	// Now query again and check
+	nodeRequeried, err := storage.GetByReference(node.GetReference())
+	assert.NoError(t, err)
+	assert.Equal(t, "new metadata set to string", nodeRequeried.GetMetadata())
+
+	// non-null -> null
+	err = mutableNode.SetMetadata(nil)
+	assert.NoError(t, err)
+	assert.Nil(t, node.GetMetadata())
+
+	// Now query again and check
+	nodeRequeried, err = storage.GetByReference(node.GetReference())
+	assert.NoError(t, err)
+	assert.Nil(t, nodeRequeried.GetMetadata())
+
+	// null -> non-null
+	err = mutableNode.SetMetadata(9.1)
+	assert.NoError(t, err)
+	assert.Equal(t, 9.1, node.GetMetadata())
+
+	// Now query again and check
+	nodeRequeried, err = storage.GetByReference(node.GetReference())
+	assert.NoError(t, err)
+	assert.Equal(t, 9.1, nodeRequeried.GetMetadata())
 
 	err = storage.Close()
 	assert.NoError(t, err)

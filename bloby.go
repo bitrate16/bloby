@@ -1,5 +1,7 @@
 package bloby
 
+import "io"
+
 type Storage interface {
 	GetByReference(reference string) (Node, error)
 	GetByName(name string) (Node, error)
@@ -18,4 +20,21 @@ type Node interface {
 	GetReference() string
 	GetName() string
 	GetMetadata() interface{}
+}
+
+type TMutable interface {
+	SetMetadata(metadata interface{}) error
+	SetName(name string) error
+}
+
+type TPath interface {
+	GetPath() string
+}
+
+type TInput interface {
+	GetI() (io.Reader, error)
+}
+
+type IOutput interface {
+	GetO() (io.Writer, error)
 }

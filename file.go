@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/rand"
 	"os"
 	"path"
@@ -25,6 +26,18 @@ func randomHexString(n int) string {
 	}
 
 	return hex.EncodeToString(b)
+}
+
+func checkStorageIsNil(storage *FileStorage) {
+	if storage == nil {
+		panic("storage is nil")
+	}
+}
+
+func checkNodeIsNil(node *FileNode) {
+	if node == nil {
+		panic("node is nil")
+	}
 }
 
 type FileStorage struct {
@@ -62,9 +75,7 @@ func NewFileStorage(path string) (*FileStorage, error) {
 }
 
 func (storage *FileStorage) GetByReference(reference string) (Node, error) {
-	if storage == nil {
-		return nil, errors.New("storage is nil")
-	}
+	checkStorageIsNil(storage)
 
 	storage.lock.RLock()
 	defer storage.lock.RUnlock()
@@ -92,6 +103,7 @@ func (storage *FileStorage) GetByReference(reference string) (Node, error) {
 	}
 
 	var node FileNode
+	node.storage = storage
 	node.name = resultName
 	node.reference = resultReference
 
@@ -106,9 +118,7 @@ func (storage *FileStorage) GetByReference(reference string) (Node, error) {
 }
 
 func (storage *FileStorage) GetByName(name string) (Node, error) {
-	if storage == nil {
-		return nil, errors.New("storage is nil")
-	}
+	checkStorageIsNil(storage)
 
 	storage.lock.RLock()
 	defer storage.lock.RUnlock()
@@ -136,6 +146,7 @@ func (storage *FileStorage) GetByName(name string) (Node, error) {
 	}
 
 	var node FileNode
+	node.storage = storage
 	node.name = resultName
 	node.reference = resultReference
 
@@ -150,9 +161,7 @@ func (storage *FileStorage) GetByName(name string) (Node, error) {
 }
 
 func (storage *FileStorage) Create(name string, metadata interface{}) (Node, error) {
-	if storage == nil {
-		return nil, errors.New("storage is nil")
-	}
+	checkStorageIsNil(storage)
 
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
@@ -162,6 +171,7 @@ func (storage *FileStorage) Create(name string, metadata interface{}) (Node, err
 	}
 
 	node := FileNode{
+		storage:   storage,
 		reference: randomHexString(24),
 		name:      name,
 		metadata:  metadata,
@@ -182,9 +192,7 @@ func (storage *FileStorage) Create(name string, metadata interface{}) (Node, err
 }
 
 func (storage *FileStorage) Delete(reference string) error {
-	if storage == nil {
-		return errors.New("storage is nil")
-	}
+	checkStorageIsNil(storage)
 
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
@@ -205,9 +213,7 @@ func (storage *FileStorage) Delete(reference string) error {
 }
 
 func (storage *FileStorage) DeleteBy(namePrefix string, namePostfix string) error {
-	if storage == nil {
-		return errors.New("storage is nil")
-	}
+	checkStorageIsNil(storage)
 
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
@@ -248,9 +254,7 @@ func (storage *FileStorage) DeleteBy(namePrefix string, namePostfix string) erro
 }
 
 func (storage *FileStorage) ExistsByName(name string) (bool, error) {
-	if storage == nil {
-		return false, errors.New("storage is nil")
-	}
+	checkStorageIsNil(storage)
 
 	storage.lock.RLock()
 	defer storage.lock.RUnlock()
@@ -268,9 +272,7 @@ func (storage *FileStorage) ExistsByName(name string) (bool, error) {
 }
 
 func (storage *FileStorage) ExistsByReference(reference string) (bool, error) {
-	if storage == nil {
-		return false, errors.New("storage is nil")
-	}
+	checkStorageIsNil(storage)
 
 	storage.lock.RLock()
 	defer storage.lock.RUnlock()
@@ -288,9 +290,7 @@ func (storage *FileStorage) ExistsByReference(reference string) (bool, error) {
 }
 
 func (storage *FileStorage) ListBy(namePrefix string, namePostfix string) ([]Node, error) {
-	if storage == nil {
-		return nil, errors.New("storage is nil")
-	}
+	checkStorageIsNil(storage)
 
 	storage.lock.RLock()
 	defer storage.lock.RUnlock()
@@ -317,6 +317,7 @@ func (storage *FileStorage) ListBy(namePrefix string, namePostfix string) ([]Nod
 		}
 
 		var node FileNode
+		node.storage = storage
 		node.name = resultName
 		node.reference = resultReference
 
@@ -334,9 +335,7 @@ func (storage *FileStorage) ListBy(namePrefix string, namePostfix string) ([]Nod
 }
 
 func (storage *FileStorage) ListReferences(namePrefix string, namePostfix string) ([]string, error) {
-	if storage == nil {
-		return nil, errors.New("storage is nil")
-	}
+	checkStorageIsNil(storage)
 
 	storage.lock.RLock()
 	defer storage.lock.RUnlock()
@@ -366,10 +365,13 @@ func (storage *FileStorage) ListReferences(namePrefix string, namePostfix string
 	return references, nil
 }
 
+// Open FileStorage in goroutine-safe mode
+//
+// WARNING:
+//
+//	This implementation supports only multigoroutine access, but not the multiprocess access. opening database in multiprocess mode will cause database corruption.
 func (storage *FileStorage) Open() error {
-	if storage == nil {
-		return errors.New("storage is nil")
-	}
+	checkStorageIsNil(storage)
 
 	storage.lock.RLock()
 	defer storage.lock.RUnlock()
@@ -379,7 +381,13 @@ func (storage *FileStorage) Open() error {
 	}
 
 	os.Mkdir(storage.path, 0755)
-	db, err := sql.Open("sqlite3", filepath.Join(storage.path, "metadata.db"))
+	dbPath := filepath.Join(storage.path, "metadata.db")
+	dbPath, err := filepath.Abs(dbPath)
+	if err != nil {
+		return err
+	}
+
+	db, err := sql.Open("sqlite3", "file:"+dbPath+"?mode=rwc&nolock=1")
 	if err != nil {
 		return err
 	}
@@ -392,9 +400,7 @@ func (storage *FileStorage) Open() error {
 }
 
 func (storage *FileStorage) Close() error {
-	if storage == nil {
-		return errors.New("storage is nil")
-	}
+	checkStorageIsNil(storage)
 
 	storage.lock.RLock()
 	defer storage.lock.RUnlock()
@@ -411,31 +417,79 @@ func (storage *FileStorage) Close() error {
 }
 
 type FileNode struct {
+	storage   *FileStorage
 	reference string
 	name      string
 	metadata  interface{}
 }
 
 func (node *FileNode) GetReference() string {
-	if node == nil {
-		panic("node is nil")
-	}
+	checkNodeIsNil(node)
 
 	return node.reference
 }
 
 func (node *FileNode) GetName() string {
-	if node == nil {
-		panic("node is nil")
-	}
+	checkNodeIsNil(node)
 
 	return node.name
 }
 
 func (node *FileNode) GetMetadata() interface{} {
-	if node == nil {
-		panic("node is nil")
-	}
+	checkNodeIsNil(node)
 
 	return node.metadata
+}
+
+func (node *FileNode) SetName(name string) error {
+	checkNodeIsNil(node)
+
+	node.storage.lock.Lock()
+	defer node.storage.lock.Unlock()
+
+	if !node.storage.isOpen {
+		return errors.New("storage is closed")
+	}
+
+	_, err := node.storage.db.Exec("update or ignore metadata set name = ? where reference = ?", name, node.reference)
+	if err != nil {
+		return err
+	}
+
+	node.name = name
+
+	return nil
+}
+
+func (node *FileNode) SetMetadata(metadata interface{}) error {
+	checkNodeIsNil(node)
+
+	node.storage.lock.Lock()
+	defer node.storage.lock.Unlock()
+
+	if !node.storage.isOpen {
+		return errors.New("storage is closed")
+	}
+
+	if metadata == nil {
+		fmt.Printf("set to nil")
+		_, err := node.storage.db.Exec("update or ignore metadata set metadata = null where reference = ?", node.reference)
+		if err != nil {
+			return err
+		}
+	} else {
+		metadataBytes, err := json.Marshal(metadata)
+		if err != nil {
+			return err
+		}
+
+		_, err = node.storage.db.Exec("update or ignore metadata set metadata = ? where reference = ?", string(metadataBytes), node.reference)
+		if err != nil {
+			return err
+		}
+	}
+
+	node.metadata = metadata
+
+	return nil
 }
