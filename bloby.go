@@ -22,19 +22,23 @@ type Node interface {
 	GetMetadata() interface{}
 }
 
-type TMutable interface {
+type Mutable interface {
 	SetMetadata(metadata interface{}) error
 	SetName(name string) error
 }
 
-type TPath interface {
+type Pathable interface {
 	GetPath() string
 }
 
-type TInput interface {
-	GetI() (io.Reader, error)
+type Readable interface {
+	GetReader() (io.Reader, error)
 }
 
-type IOutput interface {
-	GetO() (io.Writer, error)
+type Writable interface {
+	GetWriter() (io.Writer, error)
+}
+
+type FlagWritable interface {
+	GetFlagWriter(flag int) (io.Writer, error)
 }

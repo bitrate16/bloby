@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"path"
@@ -56,6 +57,10 @@ func (s *FileStorage) initDB() {
 
 func (s *FileStorage) getPathByReference(reference string) string {
 	return path.Join(s.path, reference[0:2], reference[2:4], reference[4:6], reference)
+}
+
+func (s *FileStorage) getDirByReference(reference string) string {
+	return path.Join(s.path, reference[0:2], reference[2:4], reference[4:6])
 }
 
 func (s *FileStorage) deleteFileNode(reference string) {
@@ -472,7 +477,6 @@ func (node *FileNode) SetMetadata(metadata interface{}) error {
 	}
 
 	if metadata == nil {
-		fmt.Printf("set to nil")
 		_, err := node.storage.db.Exec("update or ignore metadata set metadata = null where reference = ?", node.reference)
 		if err != nil {
 			return err
@@ -492,4 +496,31 @@ func (node *FileNode) SetMetadata(metadata interface{}) error {
 	node.metadata = metadata
 
 	return nil
+}
+
+func (node *FileNode) GetPath() string {
+	checkNodeIsNil(node)
+
+	return node.storage.getPathByReference(node.reference)
+}
+
+func (node *FileNode) GetReader() (io.Reader, error) {
+	checkNodeIsNil(node)
+
+	return os.Open(node.GetPath())
+}
+
+func (node *FileNode) GetWriter() (io.Writer, error) {
+	checkNodeIsNil(node)
+
+	os.MkdirAll(node.storage.getDirByReference(node.reference), 0755)
+	fmt.Printf("Will open %v\n", node.GetPath())
+	return os.Create(node.GetPath())
+}
+
+func (node *FileNode) GetFlagWriter(flag int) (io.Writer, error) {
+	checkNodeIsNil(node)
+
+	os.MkdirAll(node.storage.getDirByReference(node.reference), 0755)
+	return os.OpenFile(node.GetPath(), flag, 0755)
 }

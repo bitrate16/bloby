@@ -1,6 +1,7 @@
 package bloby
 
 import (
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -896,7 +897,7 @@ func TestRename(t *testing.T) {
 	assert.NotNil(t, node.GetMetadata())
 
 	// Cast & rename
-	mutableNode, ok := node.(TMutable)
+	mutableNode, ok := node.(Mutable)
 	assert.True(t, ok)
 
 	err = mutableNode.SetName("BBBBBBBB")
@@ -963,7 +964,7 @@ func TestChangeMetadata(t *testing.T) {
 	assert.NotNil(t, node.GetMetadata())
 
 	// Cast & change
-	mutableNode, ok := node.(TMutable)
+	mutableNode, ok := node.(Mutable)
 	assert.True(t, ok)
 
 	// non-null -> non-null
@@ -995,6 +996,69 @@ func TestChangeMetadata(t *testing.T) {
 	nodeRequeried, err = storage.GetByReference(node.GetReference())
 	assert.NoError(t, err)
 	assert.Equal(t, 9.1, nodeRequeried.GetMetadata())
+
+	err = storage.Close()
+	assert.NoError(t, err)
+
+	assert.DirExists(t, testDirName)
+}
+
+func TestFileIO(t *testing.T) {
+	testDirName := "test-file-storage-TestFileIO"
+
+	t.Cleanup(func() {
+		os.RemoveAll(testDirName)
+	})
+
+	storage, err := NewFileStorage(testDirName)
+	assert.NoError(t, err)
+	assert.NotNil(t, storage)
+
+	err = storage.Open()
+	assert.NoError(t, err)
+
+	// Create full node
+	node, err := storage.Create(
+		"cats",
+		nil,
+	)
+	assert.NoError(t, err)
+	assert.NotNil(t, node)
+
+	MEOW := []byte("meow")
+
+	// Writable
+	writable, ok := node.(Writable)
+	assert.True(t, ok)
+	assert.NotNil(t, writable)
+
+	writer, err := writable.GetWriter()
+	assert.NoError(t, err)
+
+	writer.Write(MEOW)
+	if closeable, ok := writer.(io.Closer); ok {
+		closeable.Close()
+	}
+
+	// Readable
+	readable, ok := node.(Readable)
+	assert.True(t, ok)
+	assert.NotNil(t, readable)
+
+	reader, err := readable.GetReader()
+	assert.NoError(t, err)
+
+	var buffer [1024]byte
+	cnt, err := reader.Read(buffer[:])
+	assert.NoError(t, err)
+
+	assert.Equal(t, len(MEOW), cnt)
+	assert.Equal(t, len(MEOW), len(buffer[:cnt]))
+	assert.Equal(t, MEOW, buffer[:cnt])
+
+	if closeable, ok := reader.(io.Closer); ok {
+		closeable.Close()
+	}
 
 	err = storage.Close()
 	assert.NoError(t, err)
