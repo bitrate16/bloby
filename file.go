@@ -55,11 +55,11 @@ func (s *FileStorage) initDB() {
 }
 
 func (s *FileStorage) getPathByReference(reference string) string {
-	return path.Join(s.path, reference[0:2], reference[2:4], reference[4:6], reference)
+	return path.Join(s.path, "tree", reference[0:2], reference[2:4], reference[4:6], reference)
 }
 
 func (s *FileStorage) getDirByReference(reference string) string {
-	return path.Join(s.path, reference[0:2], reference[2:4], reference[4:6])
+	return path.Join(s.path, "tree", reference[0:2], reference[2:4], reference[4:6])
 }
 
 func (s *FileStorage) deleteFileNode(reference string) {
