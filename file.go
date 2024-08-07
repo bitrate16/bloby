@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"math/rand"
 	"os"
@@ -514,7 +513,6 @@ func (node *FileNode) GetWriter() (io.Writer, error) {
 	checkNodeIsNil(node)
 
 	os.MkdirAll(node.storage.getDirByReference(node.reference), 0755)
-	fmt.Printf("Will open %v\n", node.GetPath())
 	return os.Create(node.GetPath())
 }
 
