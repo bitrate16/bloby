@@ -66,16 +66,16 @@ func (s *FileStorage) deleteFileNode(reference string) {
 	os.RemoveAll(s.getPathByReference(reference))
 }
 
-func NewFileStorage(path string) (*FileStorage, error) {
+func NewFileStorage(path string) *FileStorage {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	return &FileStorage{
 		path:   absPath,
 		isOpen: false,
-	}, nil
+	}
 }
 
 func (storage *FileStorage) GetByReference(reference string) (Node, error) {

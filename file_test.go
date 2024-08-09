@@ -16,11 +16,10 @@ func TestOpenClose(t *testing.T) {
 		os.RemoveAll(testDirName)
 	})
 
-	storage, err := NewFileStorage(testDirName)
-	assert.NoError(t, err)
+	storage := NewFileStorage(testDirName)
 	assert.NotNil(t, storage)
 
-	err = storage.Open()
+	err := storage.Open()
 	assert.NoError(t, err)
 
 	err = storage.Close()
@@ -36,11 +35,10 @@ func TestCreate(t *testing.T) {
 		os.RemoveAll(testDirName)
 	})
 
-	storage, err := NewFileStorage(testDirName)
-	assert.NoError(t, err)
+	storage := NewFileStorage(testDirName)
 	assert.NotNil(t, storage)
 
-	err = storage.Open()
+	err := storage.Open()
 	assert.NoError(t, err)
 
 	// Create full node
@@ -287,11 +285,10 @@ func TestList(t *testing.T) {
 		os.RemoveAll(testDirName)
 	})
 
-	storage, err := NewFileStorage(testDirName)
-	assert.NoError(t, err)
+	storage := NewFileStorage(testDirName)
 	assert.NotNil(t, storage)
 
-	err = storage.Open()
+	err := storage.Open()
 	assert.NoError(t, err)
 
 	names := []string{
@@ -510,11 +507,10 @@ func TestDeleteUnordered(t *testing.T) {
 		os.RemoveAll(testDirName)
 	})
 
-	storage, err := NewFileStorage(testDirName)
-	assert.NoError(t, err)
+	storage := NewFileStorage(testDirName)
 	assert.NotNil(t, storage)
 
-	err = storage.Open()
+	err := storage.Open()
 	assert.NoError(t, err)
 
 	names := []string{
@@ -593,11 +589,10 @@ func TestDeleteLinear(t *testing.T) {
 		os.RemoveAll(testDirName)
 	})
 
-	storage, err := NewFileStorage(testDirName)
-	assert.NoError(t, err)
+	storage := NewFileStorage(testDirName)
 	assert.NotNil(t, storage)
 
-	err = storage.Open()
+	err := storage.Open()
 	assert.NoError(t, err)
 
 	names := []string{
@@ -675,11 +670,10 @@ func TestDeleteLinearLast(t *testing.T) {
 		os.RemoveAll(testDirName)
 	})
 
-	storage, err := NewFileStorage(testDirName)
-	assert.NoError(t, err)
+	storage := NewFileStorage(testDirName)
 	assert.NotNil(t, storage)
 
-	err = storage.Open()
+	err := storage.Open()
 	assert.NoError(t, err)
 
 	names := []string{
@@ -757,11 +751,10 @@ func TestDeletePrefix(t *testing.T) {
 		os.RemoveAll(testDirName)
 	})
 
-	storage, err := NewFileStorage(testDirName)
-	assert.NoError(t, err)
+	storage := NewFileStorage(testDirName)
 	assert.NotNil(t, storage)
 
-	err = storage.Open()
+	err := storage.Open()
 	assert.NoError(t, err)
 
 	names := []string{
@@ -871,11 +864,10 @@ func TestRename(t *testing.T) {
 		os.RemoveAll(testDirName)
 	})
 
-	storage, err := NewFileStorage(testDirName)
-	assert.NoError(t, err)
+	storage := NewFileStorage(testDirName)
 	assert.NotNil(t, storage)
 
-	err = storage.Open()
+	err := storage.Open()
 	assert.NoError(t, err)
 
 	// Create full node
@@ -938,11 +930,10 @@ func TestChangeMetadata(t *testing.T) {
 		os.RemoveAll(testDirName)
 	})
 
-	storage, err := NewFileStorage(testDirName)
-	assert.NoError(t, err)
+	storage := NewFileStorage(testDirName)
 	assert.NotNil(t, storage)
 
-	err = storage.Open()
+	err := storage.Open()
 	assert.NoError(t, err)
 
 	// Create full node
@@ -1010,11 +1001,10 @@ func TestFileIO(t *testing.T) {
 		os.RemoveAll(testDirName)
 	})
 
-	storage, err := NewFileStorage(testDirName)
-	assert.NoError(t, err)
+	storage := NewFileStorage(testDirName)
 	assert.NotNil(t, storage)
 
-	err = storage.Open()
+	err := storage.Open()
 	assert.NoError(t, err)
 
 	// Create full node
