@@ -41,7 +41,7 @@ func checkNodeIsNil(node *FileNode) {
 }
 
 type FileStorage struct {
-	lock   sync.RWMutex
+	lock   sync.Mutex
 	isOpen bool
 	path   string
 	db     *sql.DB
@@ -81,8 +81,8 @@ func NewFileStorage(path string) *FileStorage {
 func (storage *FileStorage) GetByReference(reference string) (Node, error) {
 	checkStorageIsNil(storage)
 
-	storage.lock.RLock()
-	defer storage.lock.RUnlock()
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
 
 	if !storage.isOpen {
 		return nil, errors.New("storage is closed")
@@ -124,8 +124,8 @@ func (storage *FileStorage) GetByReference(reference string) (Node, error) {
 func (storage *FileStorage) GetByName(name string) (Node, error) {
 	checkStorageIsNil(storage)
 
-	storage.lock.RLock()
-	defer storage.lock.RUnlock()
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
 
 	if !storage.isOpen {
 		return nil, errors.New("storage is closed")
@@ -260,8 +260,8 @@ func (storage *FileStorage) DeleteBy(namePrefix string, namePostfix string) erro
 func (storage *FileStorage) ExistsByName(name string) (bool, error) {
 	checkStorageIsNil(storage)
 
-	storage.lock.RLock()
-	defer storage.lock.RUnlock()
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
 
 	if !storage.isOpen {
 		return false, errors.New("storage is closed")
@@ -278,8 +278,8 @@ func (storage *FileStorage) ExistsByName(name string) (bool, error) {
 func (storage *FileStorage) ExistsByReference(reference string) (bool, error) {
 	checkStorageIsNil(storage)
 
-	storage.lock.RLock()
-	defer storage.lock.RUnlock()
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
 
 	if !storage.isOpen {
 		return false, errors.New("storage is closed")
@@ -296,8 +296,8 @@ func (storage *FileStorage) ExistsByReference(reference string) (bool, error) {
 func (storage *FileStorage) ListBy(namePrefix string, namePostfix string) ([]Node, error) {
 	checkStorageIsNil(storage)
 
-	storage.lock.RLock()
-	defer storage.lock.RUnlock()
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
 
 	if !storage.isOpen {
 		return nil, errors.New("storage is closed")
@@ -341,8 +341,8 @@ func (storage *FileStorage) ListBy(namePrefix string, namePostfix string) ([]Nod
 func (storage *FileStorage) ListReferences(namePrefix string, namePostfix string) ([]string, error) {
 	checkStorageIsNil(storage)
 
-	storage.lock.RLock()
-	defer storage.lock.RUnlock()
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
 
 	if !storage.isOpen {
 		return nil, errors.New("storage is closed")
@@ -377,8 +377,8 @@ func (storage *FileStorage) ListReferences(namePrefix string, namePostfix string
 func (storage *FileStorage) Open() error {
 	checkStorageIsNil(storage)
 
-	storage.lock.RLock()
-	defer storage.lock.RUnlock()
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
 
 	if storage.isOpen {
 		return errors.New("storage is open")
@@ -406,8 +406,8 @@ func (storage *FileStorage) Open() error {
 func (storage *FileStorage) Close() error {
 	checkStorageIsNil(storage)
 
-	storage.lock.RLock()
-	defer storage.lock.RUnlock()
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
 
 	if !storage.isOpen {
 		return errors.New("storage is closed")
