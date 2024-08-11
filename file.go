@@ -267,12 +267,12 @@ func (storage *FileStorage) ExistsByName(name string) (bool, error) {
 		return false, errors.New("storage is closed")
 	}
 
-	node, err := storage.GetByName(name)
+	rows, err := storage.db.Query("select 1 from metadata where name = ?", name)
 	if err != nil {
 		return false, err
 	}
 
-	return node != nil && node != (*FileNode)(nil), nil
+	return rows.Next(), nil
 }
 
 func (storage *FileStorage) ExistsByReference(reference string) (bool, error) {
@@ -285,12 +285,12 @@ func (storage *FileStorage) ExistsByReference(reference string) (bool, error) {
 		return false, errors.New("storage is closed")
 	}
 
-	node, err := storage.GetByReference(reference)
+	rows, err := storage.db.Query("select 1 from metadata where reference = ?", reference)
 	if err != nil {
 		return false, err
 	}
 
-	return node != nil && node != (*FileNode)(nil), nil
+	return rows.Next(), nil
 }
 
 func (storage *FileStorage) ListBy(namePrefix string, namePostfix string) ([]Node, error) {
